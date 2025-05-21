@@ -3,14 +3,8 @@ import pickle
 import random
 
 import lmdb
-import loguru
+
 from torch.utils.data import Dataset, Subset
-
-from data_process.compound_tools import mol_to_data_pkl
-from utils.global_var_util import GlobalVar
-from utils.userconfig_util import get_current_user
-from utils.viz.naive_fg_model import convert_atom_to_fg_nums__to__fg_counts
-
 
 class PretrainDataset(Dataset):
     def __init__(self, root):
@@ -31,8 +25,6 @@ class PretrainDataset(Dataset):
         self.safe_mol_indices = []
         self.safe_mol_num = 100
         self.safe_mol_indices_init_flag = False
-        if 'fg_number' in GlobalVar.pretrain_task:
-            loguru.logger.info('Pretrain task: fg_number, converting atom to fg counts')
 
     def __len__(self):
         return self.length
@@ -51,9 +43,6 @@ class PretrainDataset(Dataset):
                 self.safe_mol_indices_init_flag = True
             sample_idx = random.choice(self.safe_mol_indices)
             return self.__getitem__(sample_idx)
-        if 'function_group_index' in data and data['function_group_index'] is not None \
-                and 'fg_number' in GlobalVar.pretrain_task and 'fg_number' not in data:
-            data['fg_number'] = convert_atom_to_fg_nums__to__fg_counts(data['function_group_index'])
         return data
 
 
