@@ -18,11 +18,8 @@ class bce_loss(nn.Module):
 
     def forward(self, pred, label):
         if self.weights is not None:
-            fore_weights = torch.tensor(self.weights[0])
-            back_weights = self.weights[1]
-
-            fore_weights = fore_weights.to('cuda')
-            back_weights = back_weights.to('cuda')
+            fore_weights = torch.tensor(self.weights[0], device=label.device)
+            back_weights = torch.tensor(self.weights[1], device=label.device)
             weights = label * back_weights + (1.0 - label) * fore_weights
         else:
             weights = torch.ones(label.shape, device=label.device)
@@ -121,7 +118,7 @@ def get_balanced_atom_fg_loss(pred__, label__, loss_f_atom_fg: Callable, advance
         label_zero_index = (label__ == 0)
         label_pos = label__[label_positive_index]
         label_zero = label__[label_zero_index]
-        index_zero = torch.randperm(len(label_zero), device='cuda')
+        index_zero = torch.randperm(len(label_zero), device=label__.device)
         label_zero_random = label_zero[index_zero[:len(label_pos)]]
         label_all = torch.cat([label_pos, label_zero_random], dim=0)
         pred_positive = pred__[label_positive_index]
@@ -133,14 +130,14 @@ def get_balanced_atom_fg_loss(pred__, label__, loss_f_atom_fg: Callable, advance
         label_zero_index = (label__ == 0)
         label_pos = label__[label_positive_index]
         label_zero = label__[label_zero_index]
-        index_zero = torch.randperm(len(label_zero), device='cuda')
+        index_zero = torch.randperm(len(label_zero), device=label__.device)
         label_zero_random = label_zero[index_zero[:len(label_pos)]]
         label_all = torch.cat([label_pos, label_zero_random], dim=0)
         pred_positive = pred__[label_positive_index]
         pred_negative = pred__[label_zero_index][index_zero[:len(label_pos)]]
         indices: Tensor = torch.nonzero(label_positive_index)
-        # table__ = torch.ones(label__.shape[1], device='cuda')
-        table__ = tensor(get_audit_atom_fg_frequency_arr(), device='cuda')
+        # table__ = torch.ones(label__.shape[1], device=label__.device)
+        table__ = tensor(get_audit_atom_fg_frequency_arr(), device=label__.device)
         indices_i, indices_j, indices_k = indices[:, 0], indices[:, 1], indices[:, 2]
         # print('indices_j=', indices_j)
         # print('indices_k=', indices_k)

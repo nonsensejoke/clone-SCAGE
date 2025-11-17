@@ -69,13 +69,14 @@ def compute_cls_metric_tensor(y_true: Tensor, y_pred: Tensor):
         else:
             loguru.logger.warning(f"No positively labeled pretrain_data available for label {i}. Cannot compute ROC-AUC.")
 
-    roc_auc: Tensor = torch.mean(roc_list).cuda()
+    roc_auc: Tensor = torch.mean(roc_list)
     if torch.isnan(roc_auc):
         raise RuntimeError("No positively labeled pretrain_data available. Cannot compute ROC-AUC.")
     return roc_auc.item()
 
 
-atom_acc = Accuracy(num_labels=nfg() + 1, average="micro", task='multilabel').cuda()
+_METRIC_DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+atom_acc = Accuracy(num_labels=nfg() + 1, average="micro", task='multilabel').to(_METRIC_DEVICE)
 
 
 def compute_atom_fg_metric(y_score, y_true):
@@ -136,7 +137,8 @@ def compute_atom_fg_metric_cuda_tensor(y_score: Tensor, y_true: Tensor):
 
 
 def compute_bond_fg_metric(y_score, y_true):
-    bond_acc = Accuracy(num_classes=8, average="micro", task='multiclass').cuda()
+    device = y_score.device if isinstance(y_score, torch.Tensor) else _METRIC_DEVICE
+    bond_acc = Accuracy(num_classes=8, average="micro", task='multiclass').to(device)
     acc = bond_acc(y_score, y_true)
 
     roc_auc = torchmetrics.functional.auroc(y_score, y_true, task='multiclass', num_classes=8)
@@ -147,7 +149,7 @@ def compute_bond_fg_metric(y_score, y_true):
     return acc, roc_auc
 
 
-sp_metric_acc = Accuracy(num_classes=21, average="weighted", task='multiclass').cuda()
+sp_metric_acc = Accuracy(num_classes=21, average="weighted", task='multiclass').to(_METRIC_DEVICE)
 
 
 def compute_sp_metric(y_score, y_true):
@@ -155,14 +157,14 @@ def compute_sp_metric(y_score, y_true):
     roc_auc = torchmetrics.functional.auroc(y_score, y_true, task='multiclass', num_classes=21, average='weighted')
     return acc, roc_auc
 
-finger_metric_acc = Accuracy(num_classes=2, average="weighted", task='binary').cuda()
+finger_metric_acc = Accuracy(num_classes=2, average="weighted", task='binary').to(_METRIC_DEVICE)
 def compute_finger_metric(y_score, y_true):
     acc = finger_metric_acc(y_score, y_true)
     roc_auc = torchmetrics.functional.auroc(y_score, y_true, task='binary', num_classes=2, average='weighted')
     return acc, roc_auc
 
 
-pair_distances_metric_acc = Accuracy(num_classes=30, average="weighted", task='multiclass').cuda()
+pair_distances_metric_acc = Accuracy(num_classes=30, average="weighted", task='multiclass').to(_METRIC_DEVICE)
 
 
 def compute_pair_distances_metric(y_score, y_true):
@@ -171,7 +173,7 @@ def compute_pair_distances_metric(y_score, y_true):
     return acc, roc_auc
 
 
-angles_metric_acc = Accuracy(num_classes=20, average="weighted", task='multiclass').cuda()
+angles_metric_acc = Accuracy(num_classes=20, average="weighted", task='multiclass').to(_METRIC_DEVICE)
 
 
 def compute_angles_metric(y_score, y_true):

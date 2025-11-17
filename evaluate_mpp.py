@@ -50,13 +50,15 @@ class Trainer(object):
     def __init__(self, config, file_path):
         self.imbalance_ratio = None
         self.config = config
+        # decide device dynamically
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.test_loader = self.get_data_loaders()
         self.net = self._get_net()
         # print_info("Compiling model...")
         # self.net = torch.compile(self.net)
         # print_info("Model compiled!")
-        self.criterion = self._get_loss_fn().cuda()
+        self.criterion = self._get_loss_fn().to(self.device)
         self.optim = self._get_optim()
         self.lr_scheduler = self._get_lr_scheduler()
         loguru.logger.info(f"Optimizer: {self.optim}")
@@ -79,10 +81,10 @@ class Trainer(object):
 
         self.batch_considered = 200
 
-        self.loss_init = torch.zeros(3, self.batch_considered, device='cuda')
-        self.loss_last = torch.zeros(3, self.batch_considered // 10, device='cuda')
-        self.loss_last2 = torch.zeros(3, self.batch_considered // 10, device='cuda')
-        self.cur_loss_step = torch.zeros(1, dtype=torch.long, device='cuda')
+        self.loss_init = torch.zeros(3, self.batch_considered, device=self.device)
+        self.loss_last = torch.zeros(3, self.batch_considered // 10, device=self.device)
+        self.loss_last2 = torch.zeros(3, self.batch_considered // 10, device=self.device)
+        self.cur_loss_step = torch.zeros(1, dtype=torch.long, device=self.device)
         # self.register_buffer('loss_init', loss_init)
         # self.register_buffer('loss_last', loss_last)
         # self.register_buffer('loss_last2', loss_last2)
@@ -145,11 +147,11 @@ class Trainer(object):
                       num_kernel=config['model']['num_kernel'], layer_num=config['model']['layer_num'],
                       num_heads=config['model']['num_heads'],
                       atom_FG_class=nfg() + 1,
-                      hidden_size=config['model']['hidden_size'], num_tasks=config['num_tasks']).cuda()
+                      hidden_size=config['model']['hidden_size'], num_tasks=config['num_tasks']).to(self.device)
         model_name = 'model.pth'
         if self.config['pretrain_model_path'] != 'None':
             model_path = os.path.join(self.config['pretrain_model_path'], model_name)
-            state_dict = torch.load(model_path, map_location='cuda')
+            state_dict = torch.load(model_path, map_location=self.device)
             model.model.load_model_state_dict(state_dict['model'])
             print("Loading pretrain model from", os.path.join(self.config['pretrain_model_path'], model_name))
         if GlobalVar.parallel_train:
@@ -258,7 +260,7 @@ class Trainer(object):
 
             loss = self.criterion(pred, label)
             # print('pred=', pred.shape)
-            loss = torch.where(is_valid, loss, torch.zeros(loss.shape, device='cuda').to(loss.dtype))
+            loss = torch.where(is_valid, loss, torch.zeros_like(loss, device=loss.device, dtype=loss.dtype))
             loss = torch.sum(loss) / torch.sum(is_valid)
         else:
             loss = self.criterion(pred, batch['label'].float())
@@ -268,12 +270,12 @@ class Trainer(object):
 
     def _valid_step(self, valid_loader):
         self.net.eval()
-        y_pred = Tensor().to('cuda')
-        y_true = Tensor().to('cuda')
+        y_pred = Tensor().to(self.device)
+        y_true = Tensor().to(self.device)
         valid_loss = 0
         num_data = 0
         for batch in valid_loader:
-            batch = {key: value.to('cuda') for key, value in batch.items()
+            batch = {key: value.to(self.device) for key, value in batch.items()
                      if value is not None and not isinstance(value, list)}
             batch['edge_weight'] = None
             with torch.no_grad():
@@ -314,7 +316,7 @@ class Trainer(object):
     def load_ckpt(self, load_pth):
         if GlobalVar.use_ckpt:
             print(f'load model from {load_pth}')
-            checkpoint = torch.load(load_pth, map_location='cuda')['model']
+            checkpoint = torch.load(load_pth, map_location=self.device)['model']
             new_model_dict = self.net.state_dict()
             new_model_keys = set(list(new_model_dict.keys()))
 
@@ -346,7 +348,7 @@ class Trainer(object):
         # print(self.config)
         # print(self.config['DownstreamModel']['dropout'])
         # write_record(self.txtfile, self.config)
-        self.net = self.net.to('cuda')
+        self.net = self.net.to(self.device)
         # 设置模型并行
         # if self.config['DP']:
         #     self.net = torch.nn.DataParallel(self.net)
