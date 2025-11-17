@@ -31,7 +31,7 @@ from rdkit.Chem import rdDepictor
 # noinspection PyUnresolvedReferences
 from rdkit.Chem import rdchem
 # noinspection PyUnresolvedReferences
-from rdkit.Chem.Draw import rdMolDraw2D
+#from rdkit.Chem.Draw import rdMolDraw2D
 # noinspection PyUnresolvedReferences
 from rdkit.Chem.rdchem import Mol
 
@@ -44,7 +44,7 @@ from utils.global_var_util import GlobalVar
 # noinspection PyUnresolvedReferences
 from rdkit.Chem import rdDepictor
 # noinspection PyUnresolvedReferences
-from rdkit.Chem.Draw import rdMolDraw2D
+#from rdkit.Chem.Draw import rdMolDraw2D
 from IPython.display import SVG
 
 def check_smiles_validity(smiles):
