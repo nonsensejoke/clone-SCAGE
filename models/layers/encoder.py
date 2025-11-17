@@ -80,9 +80,11 @@ class MultiScaleAttention(nn.Module):
             cut = dist_bar[:, :, i]
             cut = cut.repeat(1, new_dist.shape[-1]).unsqueeze(1)
             dist_mask = new_dist < cut
-            indices = (torch.arange(new_dist.shape[0], device="cuda").view(new_dist.shape[0], 1, 1, 1)
+            # Ensure tensors are created on the same device (CPU or GPU) as new_dist
+            dev = new_dist.device
+            indices = (torch.arange(new_dist.shape[0], device=dev).view(new_dist.shape[0], 1, 1, 1)
                        .expand(new_dist.shape[0], new_dist.shape[0], new_dist.shape[-2], new_dist.shape[-1]))
-            mask_ = torch.eq(indices, torch.arange(new_dist.shape[0], device="cuda").view(1, new_dist.shape[0], 1, 1))
+            mask_ = torch.eq(indices, torch.arange(new_dist.shape[0], device=dev).view(1, new_dist.shape[0], 1, 1))
             dist_mask = torch.where(mask_, dist_mask, torch.zeros_like(dist_mask))
             dist_mask = dist_mask.sum(dim=1, keepdim=True)
 
@@ -137,5 +139,4 @@ class EncoderAtomLayer(nn.Module):
         x, attn = self.transformer(x, dist, dist_bar, attn_mask, attn_bias)
 
         return x
-
 
